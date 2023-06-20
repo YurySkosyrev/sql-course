@@ -24,3 +24,12 @@ CREATE TABLE employee
     salary     INT,
     UNIQUE (first_name, last_name)
 );
+
+SELECT DISTINCT
+    first_name AS f_name,
+    last_name AS l_name,
+    salary
+FROM employee AS empl
+ORDER BY first_name, salary DESC
+LIMIT 2
+OFFSET 2;

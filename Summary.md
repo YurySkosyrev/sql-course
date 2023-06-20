@@ -95,3 +95,19 @@ CREATE TABLE employee
     UNIQUE (first_name, last_name)
 );
 ```
+
+## SELECT
+
+```sql
+SELECT DISTINCT             // выбрать единственную запись
+    first_name AS f_name,   // AS в Postgres можно опустить
+    last_name AS l_name,
+    salary
+FROM employee AS empl
+ORDER BY first_name, salary DESC // по умолчанию ASC, сначала по первому полю, потом по второму
+LIMIT 2                          // выбрать ровно две записи
+OFFSET 2;                        // пропустить первые две записи
+```
+
+LIMIT и OFFSET поддерживаются не всеми СУБД.
+х
