@@ -99,14 +99,14 @@ CREATE TABLE employee
 ## SELECT
 
 ```sql
-SELECT DISTINCT             // выбрать единственную запись
-    first_name AS f_name,   // AS в Postgres можно опустить
+SELECT DISTINCT             -- выбрать единственную запись
+    first_name AS f_name,   -- AS в Postgres можно опустить
     last_name AS l_name,
     salary
 FROM employee AS empl
-ORDER BY first_name, salary DESC // по умолчанию ASC, сначала по первому полю, потом по второму
-LIMIT 2                          // выбрать ровно две записи
-OFFSET 2;                        // пропустить первые две записи
+ORDER BY first_name, salary DESC -- по умолчанию ASC, сначала по первому полю, потом по второму
+LIMIT 2                          -- выбрать ровно две записи
+OFFSET 2;                        -- пропустить первые две записи
 ```
 
 LIMIT и OFFSET поддерживаются не всеми СУБД.
@@ -130,5 +130,21 @@ CONCAT('a', 'b') - конкатенация строк.
 now() - текущая дата сервера.
 
 В schema pg_catalog можно посмотреть все доступные функции (routins) и операторы (operator)
+
+## FOREIGN KEY
+
+```sql
+company_id INT REFERENCES company (id) ---более предпочтительный вид записи, тип должен совпадать с company_id
+
+FOREIGN KEY (company_id) REFERENCES company
+```
+
+Для внешнего ключа никаких индексов автоматически не создаётся. NOT NULL так же нет.
+
+Использование внешнего ключа даёт нам согласованность данных. Мы не можем добавить id компании, которой не существует.
+Так же мы не сможем удалить компанию, на которую есть ссылка из другой таблицы.
+
+FOREIGN KEY - это такой же CONSTRAINT как UNIQUE, NOT NULL.
+
 
 
