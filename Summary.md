@@ -152,7 +152,43 @@ UNION ALL используется для объединения запросо�
 
 UNION обрезает дублирующие значения.
 
+## Подзапросы
 
+При использовании подзапроса в FROM необходимо использовать альяс
 
+```sql
+SELECT 
+    AVG(empl.salary)
+FROM (SELECT
+          *
+      FROM employee
+      ORDER BY salary DESC
+      LIMIT 2) empl;
 
+SELECT *,
+       (select max(salary) from employee) - salary diff
+FROM employee;
 
+SELECT *
+FROM employee
+WHERE company_id IN (select company.id FROM company WHERE date > '2000-01-01');
+```
+
+##DELETE
+
+```sql
+DELETE FROM employee
+WHERE salary = (SELECT MAX(salary) FROM employee);
+```
+
+При операции DELETE есть ограничения по FOREIGN KEY.
+
+Возможно задать поведение при удалении главной сущности, на которую ссылается внешний ключ.
+
+```sql
+company_id INT REFERENCES company (id) ON DELETE CASCADE
+
+-- NO ACTION, RESTRICT - по сути одно и то же, действия не предпринимаются
+-- SET DEFAULT
+-- SET NULL
+```
