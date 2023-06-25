@@ -22,6 +22,7 @@ CREATE TABLE employee
     first_name VARCHAR(128) NOT NULL ,
     last_name  VARCHAR(128) NOT NULL ,
     salary     INT,
+    company_id INT REFERENCES company(id),
     UNIQUE (first_name, last_name)
 );
 
@@ -33,3 +34,10 @@ FROM employee AS empl
 ORDER BY first_name, salary DESC
 LIMIT 2
 OFFSET 2;
+
+UPDATE employee
+SET company_id = 2,
+    salary = 1000
+WHERE id = 1
+RETURNING id, first_name || ' ' || last_name as fio; -- поддерживается не всеми СУБД
+

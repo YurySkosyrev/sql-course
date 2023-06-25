@@ -192,3 +192,18 @@ company_id INT REFERENCES company (id) ON DELETE CASCADE
 -- SET DEFAULT
 -- SET NULL
 ```
+
+## UPDATE
+
+UPDATE и DELETE возвращают только количество строк, которые они обновили.
+
+```sql
+UPDATE employee
+SET company_id = 2,
+    salary = 1000
+WHERE id = 1
+RETURNING id, first_name || ' ' || last_name as fio; -- поддерживается не всеми СУБД
+```
+
+RETURNING может понадобиться при логировании удаленных строк из БД.
+
