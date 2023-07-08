@@ -116,3 +116,27 @@ RETURNING *;
 DELETE FROM author
 WHERE id = 1
 RETURNING *;
+
+--
+
+DROP TABLE company;
+DROP TABLE employee;
+
+CREATE TABLE company (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(128) NOT NULL
+);
+
+CREATE TABLE employee (
+    id BIGSERIAL PRIMARY KEY,
+    first_name VARCHAR(128),
+    last_name VARCHAR(128),
+    company_id INT REFERENCES company(id)
+);
+
+
+
+SELECT c.name, employee.first_name || employee.last_name as fio
+FROM employee
+INNER JOIN company c on c.id = employee.company_id;
+
