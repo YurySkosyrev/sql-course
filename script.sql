@@ -206,3 +206,9 @@ CROSS JOIN (SELECT COUNT(*) FROM employee) AS e;
 SELECT c.name, e.first_name
 FROM company AS c
 LEFT JOIN employee e ON c.id = e.company_id;
+
+SELECT company.name, COUNT(e.id)
+FROM company
+LEFT JOIN employee e ON company.id = e.company_id
+GROUP BY company.id
+HAVING COUNT(e.id) > 0;
