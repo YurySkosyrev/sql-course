@@ -119,24 +119,90 @@ RETURNING *;
 
 --
 
-DROP TABLE company;
-DROP TABLE employee;
+DROP TABLE IF EXISTS employee_contact;
+DROP TABLE IF EXISTS employee;
+DROP TABLE IF EXISTS company;
+DROP TABLE IF EXISTS contact;
 
-CREATE TABLE company (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(128) NOT NULL
+CREATE TABLE company
+(
+    id   INT PRIMARY KEY,
+    name VARCHAR UNIQUE NOT NULL,
+    date DATE           NOT NULL CHECK ( date > '1995-01-01' AND date < '2020-01-01')
 );
 
-CREATE TABLE employee (
-    id BIGSERIAL PRIMARY KEY,
+CREATE TABLE employee
+(
+    id         BIGSERIAL PRIMARY KEY,
     first_name VARCHAR(128),
-    last_name VARCHAR(128),
-    company_id INT REFERENCES company(id)
+    last_name  VARCHAR(128),
+    company_id INT REFERENCES company (id),
+    salary INT
 );
 
+CREATE TABLE contact
+(
+    id     BIGINT PRIMARY KEY,
+    number VARCHAR(128) NOT NULL ,
+    type   VARCHAR(128)
+);
+
+CREATE TABLE employee_contact
+(
+    employee_id INT REFERENCES employee (id),
+    contact_id  INT REFERENCES contact (id),
+    PRIMARY KEY (employee_id, contact_id)
+);
+
+INSERT INTO company (id, name, date)
+VALUES (1, 'Google', '2001-01-01'),
+       (2, 'Apple', '2002-10-29'),
+       (3, 'Facebook', '1995-09-13'),
+       (4, 'Amazon', '2005-06-17');
+
+INSERT INTO employee (id, first_name, last_name, company_id, salary)
+VALUES
+    (1, 'Ivan', 'Sidorov', 1, 5),
+    (2, 'Ivan', 'Ivanov', 2, 10),
+    (3, 'Arni', 'Paramonov', 2, NULL),
+    (4, 'Petr', 'Petrov', 3, 20),
+    (5, 'Sveta', 'Svetikova', NULL, 15);
+
+INSERT INTO contact (id, number, type)
+VALUES
+    (1, '234-56-78', 'домашний'),
+    (2, '987-65-43', 'рабочий'),
+    (3, '565-25-91', 'мобильный'),
+    (4, '332-55-67', NULL),
+    (5, '465-11-22', NULL);
+
+INSERT INTO employee_contact (employee_id, contact_id)
+VALUES (1, 1),
+       (1, 2),
+       (2, 2),
+       (2, 3),
+       (2, 4),
+       (3, 5);
+
+SELECT company.name, CONCAT(employee.first_name, ' ', employee.last_name) AS fio
+FROM company, employee;
 
 
-SELECT c.name, employee.first_name || employee.last_name as fio
+
+SELECT c.name, CONCAT(employee.first_name, ' ', employee.last_name) AS fio,
+       ec.contact_id,
+       CONCAT(c2.number, ' ', c2.type)
 FROM employee
-INNER JOIN company c on c.id = employee.company_id;
+INNER JOIN company c
+    ON c.id = employee.company_id
+JOIN employee_contact ec
+    ON employee.id = ec.employee_id
+JOIN contact c2
+    ON ec.contact_id = c2.id;
 
+SELECT * FROM company
+CROSS JOIN (SELECT COUNT(*) FROM employee) AS e;
+
+SELECT c.name, e.first_name
+FROM company AS c
+LEFT JOIN employee e ON c.id = e.company_id;
