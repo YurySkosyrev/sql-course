@@ -162,11 +162,14 @@ VALUES (1, 'Google', '2001-01-01'),
 
 INSERT INTO employee (id, first_name, last_name, company_id, salary)
 VALUES
-    (1, 'Ivan', 'Sidorov', 1, 5),
-    (2, 'Ivan', 'Ivanov', 2, 10),
+    (1, 'Ivan', 'Sidorov', 1, 500),
+    (2, 'Ivan', 'Ivanov', 2, 1000),
     (3, 'Arni', 'Paramonov', 2, NULL),
-    (4, 'Petr', 'Petrov', 3, 20),
-    (5, 'Sveta', 'Svetikova', NULL, 15);
+    (4, 'Petr', 'Petrov', 3, 2000),
+    (5, 'Sveta', 'Svetikova', NULL, 1500),
+    (6, 'Sidor', 'Sidorov', 1, 1650),
+    (7, 'Andrey', 'Petrov', 2, 1700),
+    (8, 'Ben', 'Brown', 1, 1200);
 
 INSERT INTO contact (id, number, type)
 VALUES
@@ -212,3 +215,13 @@ FROM company
 LEFT JOIN employee e ON company.id = e.company_id
 GROUP BY company.id
 HAVING COUNT(e.id) > 0;
+
+SELECT company.name,
+       e.last_name,
+       COUNT(e.id) OVER (),
+       max(e.salary) OVER (),
+       rank() OVER (partition by company.name ORDER BY e.salary nulls first )
+FROM company
+LEFT JOIN employee e
+    ON company.id = e.company_id
+ORDER BY company.name;

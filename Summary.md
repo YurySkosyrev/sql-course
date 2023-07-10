@@ -280,3 +280,31 @@ FULL JOIN = LEFT JOIN + RIGHT JOIN.
 В случае INNER JOIN условия можно указывать как в блоке ON, так и в последующем WHERE.
 
 А в случае других JOIN, даже если указать условия в блоке ON все равно, либо левая, либо правая таблица будет отображена.
+
+## Оконные функции
+
+Позволяют применять агрегирующие и другие специальные функции к части строк, объединенных общим признаком.
+
+OVER() - открытие окна
+
+```sql
+SELECT company.name,
+       e.last_name,
+       COUNT(*) OVER ()
+FROM company
+LEFT JOIN employee e
+    ON company.id = e.company_id
+ORDER BY company.name;
+```
+
+rank() - ранжирует с пропуском
+
+dense_rank() - ранжирует без пропуска
+
+lag() - разница между текущей строкой и предыдущей
+
+В окне можно упорядочивать записи. Указывать что делать с нулевыми полями.
+
+rank() OVER (partition by company.name ORDER BY e.salary nulls first )
+
+partition by - разделение окна по определенному полю
