@@ -264,7 +264,7 @@ ALTER TABLE IF EXISTS employee
 DROP COLUMN gender;
 
 -- Part 2. Practice
-
+DROP DATABASE flight_repository;
 CREATE DATABASE flight_repository;
 
 CREATE TABLE airport
@@ -292,9 +292,9 @@ CREATE TABLE flight
     id BIGSERIAL PRIMARY KEY ,
     flight_no VARCHAR(16) NOT NULL ,
     departure_date TIMESTAMP NOT NULL ,
-    departure_aircraft_code CHAR(3) REFERENCES airport(code) NOT NULL ,
+    departure_airport_code CHAR(3) REFERENCES airport(code) NOT NULL ,
     arrival_date TIMESTAMP NOT NULL ,
-    arrival_aircraft_code CHAR(3) REFERENCES airport(code) NOT NULL ,
+    arrival_airport_code CHAR(3) REFERENCES airport(code) NOT NULL ,
     aircraft_id INT REFERENCES aircraft(id) NOT NULL ,
     status VARCHAR(32) NOT NULL
 );
@@ -411,7 +411,7 @@ SELECT (now() - interval '2 days')::date;
 SELECT (now() - interval '2 years 1 days')::time;
 
 ALTER TABLE flight
-RENAME COLUMN departure_aircraft_code TO departure_airport_code;
+RENAME COLUMN departure_airport_code TO departure_airport_code;
 
 -- Сколько мест осталось незанятых на рейсе MN3002 2020-06-14
 
@@ -436,3 +436,73 @@ select count(t.id)
 from ticket t
          join flight f on f.id = t.flight_id
 where flight_no = 'MN3002';
+
+SELECT EXISTS(select 1 from ticket where id = 2000);
+
+SELECT s.seat_no
+FROM seat s
+WHERE aircraft_id = 1
+  AND NOT EXISTS(
+        SELECT t.seat_no
+        from ticket t
+                 join flight f on f.id = t.flight_id
+        where flight_no = 'MN3002'
+          AND departure_date::date = '2020-06-14'
+      AND s.seat_no = t.seat_no
+    );
+
+-- Какие 2 перелета были самые длительные за все время?
+
+SELECT f.id,
+       f.arrival_date,
+       f.departure_date,
+       f.arrival_date - f.departure_date
+FROM flight f
+ORDER BY (f.arrival_date - f.departure_date) DESC ;
+
+-- Какая максимальная и минимальная продолжительность перелетов
+-- между Минском и Лондоном и сколько было всего таких перелетов?
+
+select first_value(f.arrival_date - f.departure_date) over (order by (f.arrival_date - f.departure_date) desc ) max_value,
+       first_value(f.arrival_date - f.departure_date) over (order by (f.arrival_date - f.departure_date)) min_value,
+       count(*) over ()
+from flight f
+join airport a on f.arrival_airport_code = a.code
+join airport d on d.code = f.departure_airport_code
+where a.city = 'Лондон'
+and  d.city = 'Минск'
+limit 1;
+
+-- Какие имена встречаются чаще всего и какую долю числа всех пассажиров они составляют?
+
+select t.passenger_name,
+       count(*),
+       round(100.0 * count(*)/(select COUNT(*) from ticket), 2)
+from ticket t
+group by t.passenger_name
+order by 2 desc;
+
+-- Вывести имена пассажиров, сколько всего каждый с таким именем купил билетов,
+-- а также на сколько это количество меньше от того имени пассажира, кто купил билетов больше всего
+
+select t1.*,
+       first_value(t1.cnt) over () - t1.cnt
+from (
+select t.passenger_no,
+       t.passenger_name,
+       count(*) cnt
+from ticket t
+group by t.passenger_no, t.passenger_name
+order by 3 desc) t1;
+
+-- Вывести стоимость всех маршрутов по убыванию.
+-- Отобразить разницу в стоимости между текущим и ближайшим в отсортированном списке маршрутами
+
+select t1.*,
+       COALESCE(lead(t1.sum_cost) over (order by t1.sum_cost), t1.sum_cost) - t1.sum_cost
+from (
+select t.flight_id,
+       sum(t.cost) sum_cost
+from ticket t
+group by t.flight_id
+order by 2 desc) t1;

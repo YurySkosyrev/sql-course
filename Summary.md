@@ -366,5 +366,21 @@ SELECT (now() - interval '2 years 1 days')::time;
 
 Для извлечение из date (год, месяц и т.д.) есть функция Extract.
 
+SELECT EXISTS(select 1 from ticket where id = 2000); - булевый оператор EXISTS();
+
+Вместо названия колонки в order by можно ставить номер колонки
+
+```sql
+select t.passenger_name,
+       count(*)
+from ticket t
+group by t.passenger_name
+order by 2 desc;
+```
+
+lead() - значение следующего элемента. lag() - предыдущего.
+
+ COALESCE(lead(t1.sum_cost) over (order by t1.sum_cost), 0) - заменить null на 0.
+
 
 
