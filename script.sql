@@ -309,6 +309,8 @@ CREATE TABLE ticket
   cost NUMERIC(8, 2)
 );
 
+CREATE UNIQUE INDEX unique_flight_id_seat_no_idx ON ticket (flight_id, seat_no);
+
 INSERT INTO airport (code, country, city)
 VALUES  ('MNK', 'Беларусь', 'Минск'),
         ('LDN', 'Англия', 'Лондон'),
