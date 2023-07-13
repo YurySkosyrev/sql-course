@@ -429,3 +429,120 @@ CREATE UNIQUE INDEX unique_flight_id_seat_no_idx ON ticket (flight_id, seat_no);
 
 Операции изменения данных (добавляение, удаление, изменение) заставляют каждый раз персчитывать индекс. Поэтому следует осторожно вводить индексы.
 
+## План выполнения запросов
+
+```sql
+explain select * from ticket;
+```
+
+Seq Scan on ticket  (cost=0.00..1.55 rows=55 width=60)
+
+Explain выполняет план запроса, а не сам запрос.
+
+Seq scan - полный скан таблицы.
+
+**cost** - стоимость запроса.
+**rows** - колличество строк.
+**width** - среднее количество байт на одну строку.
+
+Раньше оптимизатор был синтаксическим (ruled-based), но он оказался не эффективным.
+Ему на замену пришёл стоимостной (cost-based)
+
+1. page-cost - стоимость ввода вывода, мы можем считывать данные с жесткого диска по страницам (фрагментам), на одну страницу 1.0 стоимости
+2. cpu-page - сколько операций сделал процессор для каждой строчки. Стоимость одной операции 0,01
+
+cost = 1.55 = 55 * 0,01 + 1.0
+
+Для определения page-cost, в postgres хранится схема pg_catalog, в которой есть таблица pg_class. В ней хранятся статистические данные по всем таблицам, на основании которых определяется стоимость ввода-вывода.
+
+```sql
+select *
+from pg_catalog.pg_class
+where relname = 'ticket';
+```
+
+reltuples - колличество строк в таблице. Обновляется не всегда
+
+relkind - вид таблицы
+
+relpages - сколько страниц занимает наша таблица.
+
+width = BIGINT (8 байт) + 6 + 28 + BIGINT (8 байт) + 2 + NUMERIC (8 байт) = 60 байт.
+
+```sql
+select
+    avg(bit_length(passenger_no)/8), -- 6
+    avg(bit_length(passenger_name)/8), -- 28
+    avg(bit_length(seat_no)/8) -- 2
+from ticket;
+```
+
+При добавлении условий фильтрации стоимость запроса растёт, но основная составляющая стоимости - считывание и запись на диск.
+
+```sql
+explain select flight_id, count(*)
+from ticket
+group by flight_id;
+```
+
+HashAggregate  (cost=1.82..1.92 rows=9 width=16)<br>
+    Group Key: flight_id<br>
+    ->  Seq Scan on ticket  (cost=0.00..1.55 rows=55 width=8)
+
+analyse test1; - обновить статистику по таблице.
+
+```sql
+explain
+select *
+from test1
+where number1 = 1000;
+
+>>
+Index Scan using test1_number1_idx on test1  (cost=0.29..12.77 rows=3 width=21)
+  Index Cond: (number1 = 1000)
+```
+
+При использовании or в условии where можно знчительно понизить производительность (эффект от индекса)
+
+**index only scan** - задействует только индекс. После нахождения значения не делаем запрос в таблицу. Все возвращаемые данные содержатся в индексе.
+
+**index scan** - дополнительно обращаемся к таблице. Будет несколько операций считывания.
+
+**bitmap scan** - всегда состоит из двух частей. index scan, создает Bitmap (последовательность 0 и 1) на основании которой heap scan определяет на каких страницах нужно искать.
+
+0 1 0 1 0 0 0 1 1 0 ... 636 times
+
+Определяем номера страниц с которых нужно считать данные batch (одним запросом)
+
+2, 4, 8, 9 ...
+
+Bitmap scan умеет работать с несколькими индексами, выполняя побитовые операции с Bitmap для каждого индекса.
+
+```sql
+explain
+select *
+from test1
+where number1 < 1000
+  and number2 > 80000
+  and value = '12345';
+
+>>
+
+Bitmap Heap Scan on test1  (cost=125.52..415.23 rows=1 width=21)
+  Recheck Cond: ((number2 > 80000) AND (number1 < 1000)) -- проверяем условия в данных полученных после batch запроса на основании Bitmap.
+  Filter: ((value)::text = '12345'::text)
+  ->  BitmapAnd  (cost=125.52..125.52 rows=112 width=0) -- побитовое and
+        ->  Bitmap Index Scan on test1_number2_idx  (cost=0.00..35.43 rows=2019 width=0) -- создаем первую map
+              Index Cond: (number2 > 80000)
+        ->  Bitmap Index Scan on test1_number1_idx  (cost=0.00..89.83 rows=5539 width=0) -- создаем вторую map
+              Index Cond: (number1 < 1000)
+
+
+```
+
+
+
+
+
+
+

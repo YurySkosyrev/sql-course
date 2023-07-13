@@ -508,3 +508,53 @@ select t.flight_id,
 from ticket t
 group by t.flight_id
 order by 2 desc) t1;
+
+CREATE UNIQUE INDEX unique_flight_id_seat_no_idx ON ticket (flight_id, seat_no);
+
+explain select * from ticket;
+
+select *
+from pg_catalog.pg_class
+where relname = 'ticket';
+
+select
+    avg(bit_length(passenger_no)/8),
+    avg(bit_length(passenger_name)/8),
+    avg(bit_length(seat_no)/8)
+from ticket;
+
+explain select flight_id, count(*)
+from ticket
+group by flight_id;
+
+create table test1 (
+  id BIGSERIAL PRIMARY KEY ,
+  number1 INT NOT NULL ,
+  number2 INT NOT NULL ,
+  value VARCHAR(32) NOT NULL
+);
+
+insert into test1 (number1, number2, value)
+select random() * generate_series,
+       random() * generate_series,
+       generate_series
+from generate_series(1, 100000);
+
+create index test1_number1_idx on test1(number1);
+create index test1_number2_idx on test1(number2);
+
+select relname,
+       reltuples,
+       relkind,
+       relpages
+from pg_catalog.pg_class
+where relname LIKE 'test1%';
+
+analyse test1;
+
+explain
+select *
+from test1
+where number1 < 1000
+  and number2 > 80000
+  and value = '12345';
