@@ -537,8 +537,84 @@ Bitmap Heap Scan on test1  (cost=125.52..415.23 rows=1 width=21)
         ->  Bitmap Index Scan on test1_number1_idx  (cost=0.00..89.83 rows=5539 width=0) -- создаем вторую map
               Index Cond: (number1 < 1000)
 
+```
+
+## План выполнения запросов JOIN.
+
+Для просмотра более детальной характеристики по запросу, необходимо его выполнить.
+
+```sql
+explain analyse
+select *
+from test1
+join test2 t on test1.id = t.test1_id
+limit 100;
+```
+
+### Nested Loop
+
+```sql
+Limit  (cost=0.29..36.58 rows=100 width=42) (actual time=0.011..0.123 rows=100 loops=1)
+  ->  Nested Loop  (cost=0.29..36288.95 rows=100000 width=42) 
+      (actual time=0.010..0.116 rows=100 loops=1) -- действительное время и колличество записей
+        ->  Seq Scan on test2 t  (cost=0.00..1637.00 rows=100000 width=21) 
+            (actual time=0.004..0.009 rows=100 loops=1)
+        ->  Index Scan using test1_pkey on test1  (cost=0.29..0.35 rows=1 width=21) 
+            (actual time=0.001..0.001 rows=1 loops=100) -- loop был использован 100 раз.
+              Index Cond: (id = t.test1_id)
+Planning Time: 0.418 ms -- планируемое время
+Execution Time: 0.141 ms -- реальное время выполнения
 
 ```
+По id из test1 Index Scan так как есть индекс на это поле, по test1_id из test2 Full Scan, так как индекса нет.
+Затем Nested Loop делает Join.
+
+**Nested Loop** - используется при небольшом колличестве записей. Nested Loop проходит по всей таблице test2 и по индексу ищет id в таблице test1, проверяя условия соединения.
+
+### Hash Join
+
+```sql
+explain analyse
+select *
+from test1 t1
+join test2 t2 on t1.id = t2.test1_id;
+```
+
+```sql
+Hash Join  (cost=2887.00..4786.51 rows=100000 width=42) (actual time=17.069..47.798 rows=100000 loops=1)
+  Hash Cond: (t2.test1_id = t1.id)
+  ->  Seq Scan on test2 t2  (cost=0.00..1637.00 rows=100000 width=21) (actual time=0.004..4.644 rows=100000 loops=1)
+  ->  Hash  (cost=1637.00..1637.00 rows=100000 width=21) (actual time=16.781..16.782 rows=100000 loops=1)
+        Buckets: 131072  Batches: 1  Memory Usage: 6287kB
+        ->  Seq Scan on test1 t1  (cost=0.00..1637.00 rows=100000 width=21) (actual time=0.003..4.716 rows=100000 loops=1)
+Planning Time: 0.155 ms
+Execution Time: 50.704 ms
+
+```
+Происходит полное сканирование таблицы test1. Т.к. колличество записей велико, и индекс хранит только значение id и ссылку на строку в таблице, то понадобится большое количество операций обращения к таблице. Поэтому на основе таблицы test1 создаётся хэш таблица, получение данных из которой происходит за очень малое время.
+
+Далее таблица test2 сканируется полностью и по id быстро происходит join с данными из hash-таблицы.
+
+Buckets: - сколько было создано бакетов.
+
+Batches: 1  Memory Usage: 6287kB - всё, что больше одного, значит было обращение к жесткому диску. ОЗУ не хватило.
+
+### Merge Join
+
+```sql
+explain analyse
+select *
+from test1 t1
+join (select * from test2 order by test1_id) t2 on t1.id = t2.test1_id;
+```
+
+Для Merge Join необходимо, чтобы обе таблицы были отсортированы. Далее происходит слияние двух отсортированных массивов id (таблиц)
+Обычно создают индекс на внеший ключ, чтобы не сортировать вручную.
+
+## Работа в командной строке
+
+
+
 
 
 

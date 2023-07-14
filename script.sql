@@ -558,3 +558,34 @@ from test1
 where number1 < 1000
   and number2 > 80000
   and value = '12345';
+
+create table test2
+(
+    id SERIAL PRIMARY KEY ,
+    test1_id INT REFERENCES test1 (id) NOT NULL ,
+    number1 INT NOT NULL ,
+    number2 INT NOT NULL ,
+    value VARCHAR(32) NOT NULL
+);
+
+
+
+
+create index test2_number1_idx on test2(number1);
+create index test2_number2_idx on test2(number2);
+
+explain analyse
+select *
+from test1
+join test2 t on test1.id = t.test1_id
+limit 100;
+
+explain analyse
+select *
+from test1 t1
+join test2 t2 on t1.id = t2.test1_id;
+
+explain analyse
+select *
+from test1 t1
+join (select * from test2 order by test1_id) t2 on t1.id = t2.test1_id;
