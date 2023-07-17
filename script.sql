@@ -589,3 +589,30 @@ explain analyse
 select *
 from test1 t1
 join (select * from test2 order by test1_id) t2 on t1.id = t2.test1_id;
+
+create table audit
+(
+  id INT,
+  table_name TEXT,
+  date TIMESTAMP
+);
+
+create or replace function audit_function() returns trigger
+language plpgsql
+AS
+$$
+    begin
+        insert into audit (id, table_name, date)
+        values (new.id, tg_table_name, now());
+        return null;
+    end;
+$$;
+
+create trigger audit_aircraft_trigger
+after update OR insert
+ON aircraft
+for each row
+execute function audit_function();
+
+insert into aircraft (model)
+values ('New boing');
